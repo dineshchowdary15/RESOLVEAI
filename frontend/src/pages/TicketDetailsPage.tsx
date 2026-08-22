@@ -16,12 +16,14 @@ import {
 } from "lucide-react";
 
 import {
+  analyzeTicket,
   deleteTicket,
   getTicketById,
   updateTicketStatus,
 } from "../api/ticketApi";
 
 import type {
+  AiAnalysis,
   Ticket,
   TicketStatus,
 } from "../types/ticket";
@@ -36,7 +38,14 @@ function TicketDetailsPage() {
 
   const navigate =
     useNavigate();
+  const [analysis, setAnalysis] =
+    useState<AiAnalysis | null>(null);
 
+  const [analyzing, setAnalyzing] =
+    useState(false);
+
+  const [analysisError, setAnalysisError] =
+    useState("");
   const [ticket, setTicket] =
     useState<Ticket | null>(null);
 
@@ -134,7 +143,37 @@ function TicketDetailsPage() {
       navigate("/tickets");
 
     };
+      const handleAnalyze =
+  async () => {
 
+    if (!ticket) {
+      return;
+    }
+
+    try {
+
+      setAnalyzing(true);
+      setAnalysisError("");
+
+      const result =
+        await analyzeTicket(ticket.id);
+
+      setAnalysis(result);
+
+    } catch (error) {
+
+      console.error(error);
+
+      setAnalysisError(
+        "AI analysis is currently unavailable."
+      );
+
+    } finally {
+
+      setAnalyzing(false);
+
+    }
+  };
   if (loading) {
 
     return (
@@ -321,24 +360,137 @@ function TicketDetailsPage() {
 
         </div>
 
-        <div className="ai-placeholder">
+        {!analysis ? (
 
-          <BrainCircuit
-            size={38}
-          />
+  <div className="ai-placeholder">
 
-          <h3>
-            AI analysis coming next
-          </h3>
+    <BrainCircuit size={38} />
 
-          <p>
-            The Python AI service will
-            analyze this incident,
-            classify it and recommend
-            possible resolutions.
-          </p>
+    <h3>
+      Analyze this incident with AI
+    </h3>
 
-        </div>
+    <p>
+      ResolveAI will classify the incident,
+      identify possible causes and recommend
+      technical troubleshooting steps.
+    </p>
+
+    {analysisError && (
+      <div className="error-message">
+        {analysisError}
+      </div>
+    )}
+
+    <button
+      className="primary-button"
+      onClick={handleAnalyze}
+      disabled={analyzing}
+    >
+      <BrainCircuit size={18} />
+
+      {analyzing
+        ? "Analyzing..."
+        : "Analyze with AI"}
+    </button>
+
+  </div>
+
+) : (
+
+  <div className="analysis-results">
+
+    <div className="analysis-summary-grid">
+
+      <div className="analysis-stat">
+        <span>Category</span>
+        <strong>
+          {analysis.category}
+        </strong>
+      </div>
+
+      <div className="analysis-stat">
+        <span>
+          Predicted Priority
+        </span>
+        <strong>
+          {analysis.predicted_priority}
+        </strong>
+      </div>
+
+      <div className="analysis-stat">
+        <span>Confidence</span>
+        <strong>
+          {Math.round(
+            analysis.confidence * 100
+          )}
+          %
+        </strong>
+      </div>
+
+    </div>
+
+    <div className="analysis-section">
+
+      <h3>Summary</h3>
+
+      <p>
+        {analysis.summary}
+      </p>
+
+    </div>
+
+    <div className="analysis-section">
+
+      <h3>Possible Causes</h3>
+
+      <ul>
+        {analysis.possible_causes.map(
+          (cause, index) => (
+
+            <li key={index}>
+              {cause}
+            </li>
+
+          )
+        )}
+      </ul>
+
+    </div>
+
+    <div className="analysis-section">
+
+      <h3>
+        Recommended Actions
+      </h3>
+
+      <ol>
+        {analysis.recommended_actions.map(
+          (action, index) => (
+
+            <li key={index}>
+              {action}
+            </li>
+
+          )
+        )}
+      </ol>
+
+    </div>
+
+    <button
+      className="secondary-button"
+      onClick={handleAnalyze}
+      disabled={analyzing}
+    >
+      {analyzing
+        ? "Analyzing..."
+        : "Run Analysis Again"}
+    </button>
+
+  </div>
+
+)}
 
       </section>
 

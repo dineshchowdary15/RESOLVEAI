@@ -74,4 +74,19 @@ public class GlobalExceptionHandler {
                 .badRequest()
                 .body(response);
     }
+    @ExceptionHandler(AiServiceUnavailableException.class)
+public ResponseEntity<ApiErrorResponse> handleAiServiceUnavailable(
+        AiServiceUnavailableException exception) {
+
+    ApiErrorResponse response = new ApiErrorResponse(
+            OffsetDateTime.now(),
+            HttpStatus.SERVICE_UNAVAILABLE.value(),
+            "AI_SERVICE_UNAVAILABLE",
+            exception.getMessage()
+    );
+
+    return ResponseEntity
+            .status(HttpStatus.SERVICE_UNAVAILABLE)
+            .body(response);
+     }
 }

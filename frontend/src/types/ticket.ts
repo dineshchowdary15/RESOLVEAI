@@ -30,3 +30,12 @@ export interface CreateTicketRequest {
 export interface UpdateTicketStatusRequest {
   status: TicketStatus;
 }
+export interface AiAnalysis {
+  ticket_id: number;
+  category: string;
+  predicted_priority: string;
+  summary: string;
+  possible_causes: string[];
+  recommended_actions: string[];
+  confidence: number;
+}

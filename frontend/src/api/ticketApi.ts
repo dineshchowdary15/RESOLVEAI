@@ -1,10 +1,13 @@
 import axios from "axios";
 
 import type {
+  AiAnalysis,
   CreateTicketRequest,
   Ticket,
   TicketStatus,
 } from "../types/ticket";
+
+
 
 const api = axios.create({
   baseURL: "http://localhost:8080/api",
@@ -58,4 +61,16 @@ export async function deleteTicket(
   id: number
 ): Promise<void> {
   await api.delete(`/tickets/${id}`);
+}
+
+export async function analyzeTicket(
+  id: number
+): Promise<AiAnalysis> {
+
+  const response =
+    await api.post<AiAnalysis>(
+      `/tickets/${id}/analyze`
+    );
+
+  return response.data;
 }
