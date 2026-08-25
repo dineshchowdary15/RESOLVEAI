@@ -18,13 +18,14 @@ import {
 import {
   analyzeTicket,
   deleteTicket,
+  getTicketAnalysis,
   getTicketById,
   updateTicketStatus,
 } from "../api/ticketApi";
 
 import type {
-  AiAnalysis,
   Ticket,
+  TicketAnalysis,
   TicketStatus,
 } from "../types/ticket";
 
@@ -32,126 +33,180 @@ import PriorityBadge from "../components/PriorityBadge";
 import StatusBadge from "../components/StatusBadge";
 
 function TicketDetailsPage() {
+  const { id } = useParams();
 
-  const { id } =
-    useParams();
+  const navigate = useNavigate();
 
-  const navigate =
-    useNavigate();
-  const [analysis, setAnalysis] =
-    useState<AiAnalysis | null>(null);
-
-  const [analyzing, setAnalyzing] =
-    useState(false);
-
-  const [analysisError, setAnalysisError] =
-    useState("");
   const [ticket, setTicket] =
     useState<Ticket | null>(null);
+
+  const [analysis, setAnalysis] =
+    useState<TicketAnalysis | null>(null);
 
   const [loading, setLoading] =
     useState(true);
 
+  const [analyzing, setAnalyzing] =
+    useState(false);
+
   const [error, setError] =
     useState("");
 
+  const [analysisError, setAnalysisError] =
+    useState("");
+
+  /*
+   * Load:
+   * 1. Ticket information
+   * 2. Previously saved AI analysis
+   */
   useEffect(() => {
+    const loadTicketData = async () => {
+      if (!id) {
+        setError("Invalid incident ID.");
+        setLoading(false);
+        return;
+      }
 
-    const loadTicket =
-      async () => {
+      const ticketId = Number(id);
 
-        try {
-
-          if (!id) {
-            return;
-          }
-
-          const data =
-            await getTicketById(
-              Number(id)
-            );
-
-          setTicket(data);
-
-        } catch (error) {
-
-          console.error(error);
-
-          setError(
-            "Incident could not be found."
-          );
-
-        } finally {
-
-          setLoading(false);
-
-        }
-
-      };
-
-    loadTicket();
-
-  }, [id]);
-
-  const handleStatusChange =
-    async (
-      status: TicketStatus
-    ) => {
-
-      if (!ticket) {
+      if (Number.isNaN(ticketId)) {
+        setError("Invalid incident ID.");
+        setLoading(false);
         return;
       }
 
       try {
+        /*
+         * Load the incident first.
+         */
+        const ticketData =
+          await getTicketById(ticketId);
 
-        const updated =
-          await updateTicketStatus(
-            ticket.id,
-            status
+        setTicket(ticketData);
+
+        /*
+         * Loading an AI analysis is optional.
+         *
+         * If no analysis exists, the incident
+         * should still display normally.
+         */
+        try {
+          const savedAnalysis =
+            await getTicketAnalysis(ticketId);
+
+          if (savedAnalysis) {
+            setAnalysis(savedAnalysis);
+          }
+        } catch (analysisLoadError) {
+          console.error(
+            "Unable to load saved AI analysis:",
+            analysisLoadError
           );
 
-        setTicket(updated);
-
-      } catch (error) {
-
-        console.error(error);
-
-      }
-
-    };
-
-  const handleDelete =
-    async () => {
-
-      if (!ticket) {
-        return;
-      }
-
-      const confirmed =
-        window.confirm(
-          "Delete this incident?"
+          /*
+           * Do not fail the whole page just because
+           * AI analysis could not be retrieved.
+           */
+          setAnalysisError(
+            "Previous AI analysis could not be loaded."
+          );
+        }
+      } catch (ticketLoadError) {
+        console.error(
+          "Unable to load incident:",
+          ticketLoadError
         );
 
-      if (!confirmed) {
-        return;
+        setError(
+          "Incident could not be loaded."
+        );
+      } finally {
+        setLoading(false);
       }
-
-      await deleteTicket(
-        ticket.id
-      );
-
-      navigate("/tickets");
-
     };
-      const handleAnalyze =
-  async () => {
 
+    loadTicketData();
+  }, [id]);
+
+  /*
+   * Update lifecycle status.
+   */
+  const handleStatusChange = async (
+    status: TicketStatus
+  ) => {
     if (!ticket) {
       return;
     }
 
     try {
+      const updated =
+        await updateTicketStatus(
+          ticket.id,
+          status
+        );
 
+      setTicket(updated);
+    } catch (statusError) {
+      console.error(
+        "Unable to update incident status:",
+        statusError
+      );
+    }
+  };
+
+  /*
+   * Delete incident.
+   */
+  const handleDelete = async () => {
+    if (!ticket) {
+      return;
+    }
+
+    const confirmed =
+      window.confirm(
+        "Are you sure you want to delete this incident?"
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await deleteTicket(ticket.id);
+
+      navigate("/tickets");
+    } catch (deleteError) {
+      console.error(
+        "Unable to delete incident:",
+        deleteError
+      );
+    }
+  };
+
+  /*
+   * Run a new AI analysis.
+   *
+   * Backend flow:
+   *
+   * React
+   *   ↓
+   * Spring Boot
+   *   ↓
+   * FastAPI
+   *   ↓
+   * Ollama
+   *   ↓
+   * PostgreSQL persistence
+   *   ↓
+   * React
+   */
+  const handleAnalyze = async () => {
+    if (!ticket) {
+      return;
+    }
+
+    try {
       setAnalyzing(true);
       setAnalysisError("");
 
@@ -159,58 +214,61 @@ function TicketDetailsPage() {
         await analyzeTicket(ticket.id);
 
       setAnalysis(result);
-
-    } catch (error) {
-
-      console.error(error);
+    } catch (analysisRequestError) {
+      console.error(
+        "AI analysis failed:",
+        analysisRequestError
+      );
 
       setAnalysisError(
         "AI analysis is currently unavailable."
       );
-
     } finally {
-
       setAnalyzing(false);
-
     }
   };
-  if (loading) {
 
+  /*
+   * Loading state.
+   */
+  if (loading) {
     return (
       <div className="page">
         Loading incident...
       </div>
     );
-
   }
 
-  if (
-    error ||
-    !ticket
-  ) {
-
+  /*
+   * Ticket not found / failed to load.
+   */
+  if (error || !ticket) {
     return (
       <div className="page">
-
         <h1>
           Incident unavailable
         </h1>
 
         <p>
-          {error}
+          {error ||
+            "The requested incident could not be found."}
         </p>
 
-        <Link to="/tickets">
+        <Link
+          to="/tickets"
+          className="back-link"
+        >
+          <ArrowLeft size={18} />
           Return to incidents
         </Link>
-
       </div>
     );
-
   }
 
   return (
     <div className="page">
+
+      {/* Back navigation */}
 
       <Link
         to="/tickets"
@@ -219,6 +277,8 @@ function TicketDetailsPage() {
         <ArrowLeft size={18} />
         Back to incidents
       </Link>
+
+      {/* Incident heading */}
 
       <header className="ticket-details-header">
 
@@ -235,15 +295,11 @@ function TicketDetailsPage() {
           <div className="badge-row">
 
             <PriorityBadge
-              priority={
-                ticket.priority
-              }
+              priority={ticket.priority}
             />
 
             <StatusBadge
-              status={
-                ticket.status
-              }
+              status={ticket.status}
             />
 
           </div>
@@ -251,6 +307,7 @@ function TicketDetailsPage() {
         </div>
 
         <button
+          type="button"
           className="danger-button"
           onClick={handleDelete}
         >
@@ -259,6 +316,8 @@ function TicketDetailsPage() {
         </button>
 
       </header>
+
+      {/* Incident information */}
 
       <div className="details-grid">
 
@@ -275,7 +334,10 @@ function TicketDetailsPage() {
           <div className="ticket-meta">
 
             <div>
-              <span>Created</span>
+              <span>
+                Created
+              </span>
+
               <strong>
                 {new Date(
                   ticket.createdAt
@@ -284,9 +346,13 @@ function TicketDetailsPage() {
             </div>
 
             <div>
-              <span>Category</span>
+              <span>
+                Category
+              </span>
+
               <strong>
-                {ticket.category ??
+                {analysis?.category ??
+                  ticket.category ??
                   "Not classified"}
               </strong>
             </div>
@@ -295,6 +361,8 @@ function TicketDetailsPage() {
 
         </section>
 
+        {/* Status management */}
+
         <section className="content-card">
 
           <h2>
@@ -302,8 +370,8 @@ function TicketDetailsPage() {
           </h2>
 
           <p>
-            Update the incident's
-            current lifecycle state.
+            Update the incident's current
+            lifecycle state.
           </p>
 
           <select
@@ -316,7 +384,6 @@ function TicketDetailsPage() {
               )
             }
           >
-
             <option value="OPEN">
               Open
             </option>
@@ -332,12 +399,13 @@ function TicketDetailsPage() {
             <option value="CLOSED">
               Closed
             </option>
-
           </select>
 
         </section>
 
       </div>
+
+      {/* AI analysis */}
 
       <section className="ai-panel">
 
@@ -346,151 +414,208 @@ function TicketDetailsPage() {
           <BrainCircuit size={24} />
 
           <div>
-
             <h2>
               AI Incident Analysis
             </h2>
 
             <p>
-              ResolveAI intelligence
-              engine
+              ResolveAI intelligence engine
             </p>
-
           </div>
 
         </div>
 
         {!analysis ? (
 
-  <div className="ai-placeholder">
+          /*
+           * No saved AI analysis yet.
+           */
+          <div className="ai-placeholder">
 
-    <BrainCircuit size={38} />
+            <BrainCircuit size={38} />
 
-    <h3>
-      Analyze this incident with AI
-    </h3>
+            <h3>
+              Analyze this incident with AI
+            </h3>
 
-    <p>
-      ResolveAI will classify the incident,
-      identify possible causes and recommend
-      technical troubleshooting steps.
-    </p>
+            <p>
+              ResolveAI will classify the
+              incident, identify possible
+              causes and recommend technical
+              troubleshooting steps.
+            </p>
 
-    {analysisError && (
-      <div className="error-message">
-        {analysisError}
-      </div>
-    )}
+            {analysisError && (
+              <div className="error-message">
+                {analysisError}
+              </div>
+            )}
 
-    <button
-      className="primary-button"
-      onClick={handleAnalyze}
-      disabled={analyzing}
-    >
-      <BrainCircuit size={18} />
+            <button
+              type="button"
+              className="primary-button"
+              onClick={handleAnalyze}
+              disabled={analyzing}
+            >
+              <BrainCircuit size={18} />
 
-      {analyzing
-        ? "Analyzing..."
-        : "Analyze with AI"}
-    </button>
+              {analyzing
+                ? "Analyzing..."
+                : "Analyze with AI"}
+            </button>
 
-  </div>
+          </div>
 
-) : (
+        ) : (
 
-  <div className="analysis-results">
+          /*
+           * Existing or newly-generated
+           * AI analysis.
+           */
+          <div className="analysis-results">
 
-    <div className="analysis-summary-grid">
+            {/* Summary metrics */}
 
-      <div className="analysis-stat">
-        <span>Category</span>
-        <strong>
-          {analysis.category}
-        </strong>
-      </div>
+            <div className="analysis-summary-grid">
 
-      <div className="analysis-stat">
-        <span>
-          Predicted Priority
-        </span>
-        <strong>
-          {analysis.predicted_priority}
-        </strong>
-      </div>
+              <div className="analysis-stat">
 
-      <div className="analysis-stat">
-        <span>Confidence</span>
-        <strong>
-          {Math.round(
-            analysis.confidence * 100
-          )}
-          %
-        </strong>
-      </div>
+                <span>
+                  Category
+                </span>
 
-    </div>
+                <strong>
+                  {analysis.category}
+                </strong>
 
-    <div className="analysis-section">
+              </div>
 
-      <h3>Summary</h3>
+              <div className="analysis-stat">
 
-      <p>
-        {analysis.summary}
-      </p>
+                <span>
+                  Predicted Priority
+                </span>
 
-    </div>
+                <strong>
+                  {analysis.predictedPriority}
+                </strong>
 
-    <div className="analysis-section">
+              </div>
 
-      <h3>Possible Causes</h3>
+              <div className="analysis-stat">
 
-      <ul>
-        {analysis.possible_causes.map(
-          (cause, index) => (
+                <span>
+                  Confidence
+                </span>
 
-            <li key={index}>
-              {cause}
-            </li>
+                <strong>
+                  {Math.round(
+                    analysis.confidence * 100
+                  )}
+                  %
+                </strong>
 
-          )
+              </div>
+
+            </div>
+
+            {/* Timestamp */}
+
+            <p className="analysis-timestamp">
+              Analysis generated{" "}
+              {new Date(
+                analysis.createdAt
+              ).toLocaleString()}
+            </p>
+
+            {/* Summary */}
+
+            <div className="analysis-section">
+
+              <h3>
+                Summary
+              </h3>
+
+              <p>
+                {analysis.summary}
+              </p>
+
+            </div>
+
+            {/* Possible causes */}
+
+            <div className="analysis-section">
+
+              <h3>
+                Possible Causes
+              </h3>
+
+              <ul>
+
+                {analysis.possibleCauses.map(
+                  (cause, index) => (
+                    <li
+                      key={`${cause}-${index}`}
+                    >
+                      {cause}
+                    </li>
+                  )
+                )}
+
+              </ul>
+
+            </div>
+
+            {/* Recommendations */}
+
+            <div className="analysis-section">
+
+              <h3>
+                Recommended Actions
+              </h3>
+
+              <ol>
+
+                {analysis.recommendedActions.map(
+                  (action, index) => (
+                    <li
+                      key={`${action}-${index}`}
+                    >
+                      {action}
+                    </li>
+                  )
+                )}
+
+              </ol>
+
+            </div>
+
+            {/* Analysis error */}
+
+            {analysisError && (
+              <div className="error-message">
+                {analysisError}
+              </div>
+            )}
+
+            {/* Re-run analysis */}
+
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={handleAnalyze}
+              disabled={analyzing}
+            >
+              <BrainCircuit size={17} />
+
+              {analyzing
+                ? "Analyzing..."
+                : "Run Analysis Again"}
+            </button>
+
+          </div>
+
         )}
-      </ul>
-
-    </div>
-
-    <div className="analysis-section">
-
-      <h3>
-        Recommended Actions
-      </h3>
-
-      <ol>
-        {analysis.recommended_actions.map(
-          (action, index) => (
-
-            <li key={index}>
-              {action}
-            </li>
-
-          )
-        )}
-      </ol>
-
-    </div>
-
-    <button
-      className="secondary-button"
-      onClick={handleAnalyze}
-      disabled={analyzing}
-    >
-      {analyzing
-        ? "Analyzing..."
-        : "Run Analysis Again"}
-    </button>
-
-  </div>
-
-)}
 
       </section>
 

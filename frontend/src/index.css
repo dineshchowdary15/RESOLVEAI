@@ -737,6 +737,12 @@ tbody tr:hover {
   color: #475569;
   line-height: 1.7;
 }
+.analysis-timestamp {
+  margin-top: 10px;
+  margin-bottom: 24px;
+  color: #64748b;
+  font-size: 12px;
+}
 
 .analysis-section ul,
 .analysis-section ol {
@@ -750,6 +756,89 @@ tbody tr:hover {
 }
 
 @media (max-width: 700px) {
+  .analysis-summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+/* ================================
+   AI ANALYSIS RESULTS
+================================ */
+
+.analysis-results {
+  margin-top: 24px;
+}
+
+.analysis-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.analysis-stat {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.analysis-stat span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.analysis-stat strong {
+  color: #1e293b;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.analysis-timestamp {
+  margin-top: 0;
+  margin-bottom: 26px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.analysis-section {
+  margin-bottom: 24px;
+}
+
+.analysis-section h3 {
+  margin: 0 0 10px;
+  color: #1e293b;
+  font-size: 17px;
+}
+
+.analysis-section p {
+  margin: 0;
+  color: #475569;
+  line-height: 1.7;
+}
+
+.analysis-section ul,
+.analysis-section ol {
+  margin: 0;
+  padding-left: 24px;
+  color: #475569;
+  line-height: 1.8;
+}
+
+.analysis-section li {
+  margin-bottom: 5px;
+}
+
+.analysis-results .secondary-button {
+  margin-top: 5px;
+}
+
+@media (max-width: 800px) {
   .analysis-summary-grid {
     grid-template-columns: 1fr;
   }

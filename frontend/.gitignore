@@ -27,6 +27,8 @@ dist-ssr
 __pycache__/
 *.pyc
 .env
+.env.*
+!.env.example
 
 # Node
 node_modules/

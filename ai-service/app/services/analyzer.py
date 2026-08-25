@@ -1,10 +1,21 @@
+import logging
+import os
+
+from app.services.llm_service import (
+    LLMServiceError,
+    analyze_incident_with_llm,
+)
+
 from app.models.analysis import (
     IncidentAnalysisRequest,
     IncidentAnalysisResponse,
 )
 
 
-def analyze_incident(
+logger = logging.getLogger(__name__)
+
+
+def analyze_incident_rule_based(
     incident: IncidentAnalysisRequest,
 ) -> IncidentAnalysisResponse:
 
@@ -122,31 +133,26 @@ def determine_possible_causes(
 ) -> list[str]:
 
     causes_by_category = {
-
         "Backend": [
             "Recent deployment introduced a regression",
             "Dependent service is unavailable or responding slowly",
             "Application configuration is incorrect",
         ],
-
         "Database": [
             "Database connection pool exhaustion",
             "Database service connectivity problem",
             "Incorrect database credentials or configuration",
         ],
-
         "Frontend": [
             "Frontend runtime or JavaScript error",
             "API request from the client is failing",
             "Recent frontend deployment introduced a regression",
         ],
-
         "DevOps": [
             "Container environment configuration is invalid",
             "Kubernetes readiness or liveness probe is failing",
             "Required dependency is unavailable during startup",
         ],
-
         "General": [
             "Recent application configuration change",
             "Dependency failure",
@@ -162,31 +168,26 @@ def determine_recommended_actions(
 ) -> list[str]:
 
     actions_by_category = {
-
         "Backend": [
             "Inspect application logs for exceptions",
             "Review the most recent backend deployment",
             "Verify dependent service connectivity",
         ],
-
         "Database": [
             "Check active database connections",
             "Verify database credentials and network access",
             "Inspect database and application logs",
         ],
-
         "Frontend": [
             "Inspect browser developer console errors",
             "Review failed network requests",
             "Compare behavior with the previous frontend release",
         ],
-
         "DevOps": [
             "Inspect Kubernetes pod logs",
             "Review pod events and deployment configuration",
             "Verify environment variables, secrets, and dependencies",
         ],
-
         "General": [
             "Inspect relevant application logs",
             "Review recent configuration changes",
@@ -195,3 +196,42 @@ def determine_recommended_actions(
     }
 
     return actions_by_category[category]
+
+
+def analyze_incident(
+    incident: IncidentAnalysisRequest,
+) -> IncidentAnalysisResponse:
+
+    use_llm = (
+        os.getenv(
+            "USE_LLM",
+            "true",
+        ).lower()
+        == "true"
+    )
+
+    # If LLM usage is disabled, use rule-based analysis.
+    if not use_llm:
+        return analyze_incident_rule_based(
+            incident
+        )
+
+    # Try OpenAI/LLM analysis.
+    try:
+        return analyze_incident_with_llm(
+            incident
+        )
+
+    # If OpenAI fails, fall back to rule-based analysis.
+    except LLMServiceError as exception:
+
+        logger.warning(
+            "LLM analysis failed. "
+            "Using rule-based fallback. "
+            "Reason: %s",
+            exception,
+        )
+
+        return analyze_incident_rule_based(
+            incident
+        )
