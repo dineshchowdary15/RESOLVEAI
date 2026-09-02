@@ -22,7 +22,10 @@ public record AiAnalysisResponse(
         @JsonProperty("recommended_actions")
         List<String> recommendedActions,
 
-        double confidence
+        double confidence,
+
+        @JsonProperty("knowledge_sources")
+        List<KnowledgeSourceResponse> knowledgeSources
 
 ) {
 }

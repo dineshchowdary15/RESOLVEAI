@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 
 from app.api.analysis import router as analysis_router
+from app.api.knowledge import router as knowledge_router
+from app.api.duplicates import (router as duplicates_router,)
 
 
 app = FastAPI(
@@ -22,3 +24,5 @@ def health_check():
 
 
 app.include_router(analysis_router)
+app.include_router(knowledge_router)
+app.include_router(duplicates_router)

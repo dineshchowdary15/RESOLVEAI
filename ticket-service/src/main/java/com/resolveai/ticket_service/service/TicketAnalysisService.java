@@ -3,6 +3,7 @@ package com.resolveai.ticketservice.service;
 import com.resolveai.ticketservice.client.AiServiceClient;
 import com.resolveai.ticketservice.dto.AiAnalysisRequest;
 import com.resolveai.ticketservice.dto.AiAnalysisResponse;
+import com.resolveai.ticketservice.dto.KnowledgeSourceResponse;
 import com.resolveai.ticketservice.dto.TicketAnalysisResponse;
 import com.resolveai.ticketservice.dto.TicketResponse;
 import com.resolveai.ticketservice.entity.TicketAnalysis;
@@ -11,6 +12,7 @@ import com.resolveai.ticketservice.repository.TicketAnalysisRepository;
 import org.springframework.stereotype.Service;
 
 import tools.jackson.core.JacksonException;
+import tools.jackson.core.JsonParser;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 
@@ -36,9 +38,11 @@ public class TicketAnalysisService {
         this.objectMapper = objectMapper;
     }
 
-    public TicketAnalysisResponse getLatestAnalysis(Long ticketId) {
+    public TicketAnalysisResponse getLatestAnalysis(
+            Long ticketId
+    ) {
 
-        // Verify that the ticket exists
+        // Verify ticket exists first
         ticketService.getTicketById(ticketId);
 
         return ticketAnalysisRepository
@@ -47,7 +51,9 @@ public class TicketAnalysisService {
                 .orElse(null);
     }
 
-    public TicketAnalysisResponse analyzeTicket(Long ticketId) {
+    public TicketAnalysisResponse analyzeTicket(
+            Long ticketId
+    ) {
 
         TicketResponse ticket =
                 ticketService.getTicketById(ticketId);
@@ -93,12 +99,25 @@ public class TicketAnalysisService {
                     )
             );
 
+            List<KnowledgeSourceResponse> knowledgeSources =
+                    aiResponse.knowledgeSources() == null
+                            ? List.of()
+                            : aiResponse.knowledgeSources();
+
+            analysis.setKnowledgeSources(
+                    objectMapper.writeValueAsString(
+                            knowledgeSources
+                    )
+            );
+
             analysis.setConfidence(
                     aiResponse.confidence()
             );
 
             TicketAnalysis saved =
-                    ticketAnalysisRepository.save(analysis);
+                    ticketAnalysisRepository.save(
+                            analysis
+                    );
 
             return mapToResponse(saved);
 
@@ -118,16 +137,25 @@ public class TicketAnalysisService {
         try {
 
             List<String> causes =
-                    objectMapper.readValue(
+                    readJson(
                             analysis.getPossibleCauses(),
                             new TypeReference<List<String>>() {
                             }
                     );
 
             List<String> actions =
-                    objectMapper.readValue(
+                    readJson(
                             analysis.getRecommendedActions(),
                             new TypeReference<List<String>>() {
+                            }
+                    );
+
+            List<KnowledgeSourceResponse> sources =
+                    readJson(
+                            analysis.getKnowledgeSources(),
+                            new TypeReference<
+                                    List<KnowledgeSourceResponse>
+                                    >() {
                             }
                     );
 
@@ -140,6 +168,7 @@ public class TicketAnalysisService {
                     causes,
                     actions,
                     analysis.getConfidence(),
+                    sources,
                     analysis.getCreatedAt()
             );
 
@@ -148,6 +177,27 @@ public class TicketAnalysisService {
             throw new IllegalStateException(
                     "Unable to deserialize AI analysis",
                     exception
+            );
+        }
+    }
+
+    private <T> T readJson(
+            String json,
+            TypeReference<T> typeReference
+    ) throws JacksonException {
+
+        if (json == null || json.isBlank()) {
+            json = "[]";
+        }
+
+        try (
+                JsonParser parser =
+                        objectMapper.createParser(json)
+        ) {
+
+            return objectMapper.readValue(
+                    parser,
+                    typeReference
             );
         }
     }

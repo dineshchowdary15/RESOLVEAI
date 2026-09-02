@@ -2,34 +2,50 @@ import axios from "axios";
 
 import type {
   CreateTicketRequest,
+  DuplicateCheckRequest,
+  DuplicateSearchResponse,
   Ticket,
   TicketAnalysis,
   TicketStatus,
 } from "../types/ticket";
 
+
 const api = axios.create({
   baseURL: "http://localhost:8080/api",
+
   headers: {
     "Content-Type": "application/json",
   },
 });
 
+
 /*
- * Get all incidents
+ * =====================================================
+ * GET ALL INCIDENTS
+ * =====================================================
  */
-export async function getTickets(): Promise<Ticket[]> {
+export async function getTickets(): Promise<
+  Ticket[]
+> {
+
   const response =
-    await api.get<Ticket[]>("/tickets");
+    await api.get<Ticket[]>(
+      "/tickets"
+    );
 
   return response.data;
 }
 
+
 /*
- * Get one incident
+ * =====================================================
+ * GET ONE INCIDENT
+ * =====================================================
  */
 export async function getTicketById(
   id: number
 ): Promise<Ticket> {
+
   const response =
     await api.get<Ticket>(
       `/tickets/${id}`
@@ -38,12 +54,20 @@ export async function getTicketById(
   return response.data;
 }
 
+
 /*
- * Create a new incident
+ * =====================================================
+ * CREATE INCIDENT
+ * =====================================================
+ *
+ * Spring Boot automatically indexes
+ * the new incident for future semantic
+ * duplicate detection.
  */
 export async function createTicket(
   request: CreateTicketRequest
 ): Promise<Ticket> {
+
   const response =
     await api.post<Ticket>(
       "/tickets",
@@ -53,13 +77,48 @@ export async function createTicket(
   return response.data;
 }
 
+
 /*
- * Update incident lifecycle status
+ * =====================================================
+ * SEMANTIC DUPLICATE SEARCH
+ * =====================================================
+ *
+ * React
+ *   ↓
+ * Spring Boot
+ *   ↓
+ * FastAPI
+ *   ↓
+ * Ollama embeddings
+ *   ↓
+ * pgvector
+ */
+export async function checkTicketDuplicates(
+  request: DuplicateCheckRequest
+): Promise<DuplicateSearchResponse> {
+
+  const response =
+    await api.post<
+      DuplicateSearchResponse
+    >(
+      "/tickets/duplicates/search",
+      request
+    );
+
+  return response.data;
+}
+
+
+/*
+ * =====================================================
+ * UPDATE INCIDENT STATUS
+ * =====================================================
  */
 export async function updateTicketStatus(
   id: number,
   status: TicketStatus
 ): Promise<Ticket> {
+
   const response =
     await api.patch<Ticket>(
       `/tickets/${id}/status`,
@@ -71,21 +130,26 @@ export async function updateTicketStatus(
   return response.data;
 }
 
+
 /*
- * Delete incident
+ * =====================================================
+ * DELETE INCIDENT
+ * =====================================================
  */
 export async function deleteTicket(
   id: number
 ): Promise<void> {
+
   await api.delete(
     `/tickets/${id}`
   );
 }
 
+
 /*
- * Run a NEW AI analysis.
- *
- * Backend flow:
+ * =====================================================
+ * RUN AI ANALYSIS
+ * =====================================================
  *
  * React
  *   ↓
@@ -93,16 +157,16 @@ export async function deleteTicket(
  *   ↓
  * FastAPI
  *   ↓
+ * RAG
+ *   ↓
  * Ollama
  *   ↓
  * PostgreSQL
- *
- * The backend saves the analysis
- * before returning it.
  */
 export async function analyzeTicket(
   id: number
 ): Promise<TicketAnalysis> {
+
   const response =
     await api.post<TicketAnalysis>(
       `/tickets/${id}/analyze`
@@ -111,15 +175,16 @@ export async function analyzeTicket(
   return response.data;
 }
 
+
 /*
- * Load the latest previously-saved
- * AI analysis from PostgreSQL.
- *
- * This does NOT run Ollama again.
+ * =====================================================
+ * GET SAVED AI ANALYSIS
+ * =====================================================
  */
 export async function getTicketAnalysis(
   id: number
 ): Promise<TicketAnalysis | null> {
+
   const response =
     await api.get<TicketAnalysis>(
       `/tickets/${id}/analysis`

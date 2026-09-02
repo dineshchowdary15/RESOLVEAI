@@ -1,6 +1,10 @@
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+)
 
 
 class IncidentAnalysisRequest(BaseModel):
@@ -33,15 +37,18 @@ class LLMIncidentAnalysis(BaseModel):
     ]
 
     summary: str
-
     possible_causes: list[str]
-
     recommended_actions: list[str]
 
     confidence: float = Field(
         ge=0.0,
         le=1.0,
     )
+
+
+class KnowledgeSource(BaseModel):
+    document_title: str
+    similarity: float
 
 
 class IncidentAnalysisResponse(BaseModel):
@@ -52,3 +59,4 @@ class IncidentAnalysisResponse(BaseModel):
     possible_causes: list[str]
     recommended_actions: list[str]
     confidence: float
+    knowledge_sources: list[KnowledgeSource] = []

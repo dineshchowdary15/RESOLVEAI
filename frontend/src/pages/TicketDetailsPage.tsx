@@ -597,6 +597,62 @@ function TicketDetailsPage() {
                 {analysisError}
               </div>
             )}
+            {analysis.knowledgeSources &&
+  analysis.knowledgeSources.length > 0 && (
+
+    <div className="analysis-section">
+
+      <h3>
+        Knowledge Sources Used
+      </h3>
+
+      <p className="source-description">
+        ResolveAI retrieved these internal
+        troubleshooting documents using
+        semantic similarity.
+      </p>
+
+      <div className="source-list">
+
+        {analysis.knowledgeSources.map(
+          (source) => (
+
+            <div
+              className="source-card"
+              key={source.documentTitle}
+            >
+
+              <div>
+
+                <strong>
+                  {source.documentTitle}
+                </strong>
+
+                <span>
+                  Internal Knowledge Base
+                </span>
+
+              </div>
+
+              <div className="source-score">
+
+                {Math.round(
+                  source.similarity * 100
+                )}
+                %
+
+              </div>
+
+            </div>
+
+          )
+        )}
+
+      </div>
+
+    </div>
+
+)}
 
             {/* Re-run analysis */}
 

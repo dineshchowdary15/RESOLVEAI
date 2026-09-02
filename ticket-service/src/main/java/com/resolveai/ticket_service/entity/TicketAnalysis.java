@@ -44,7 +44,12 @@ public class TicketAnalysis {
             columnDefinition = "TEXT"
     )
     private String recommendedActions;
-
+    @Column(
+            name = "knowledge_sources",
+            nullable = false,
+            columnDefinition = "TEXT"
+    )
+    private String knowledgeSources;
     @Column(nullable = false)
     private double confidence;
 
@@ -72,7 +77,12 @@ public class TicketAnalysis {
     public void setId(Long id) {
         this.id = id;
     }
-
+    public String getKnowledgeSources() {
+    return knowledgeSources;
+    }
+    public void setKnowledgeSources(String knowledgeSources) {
+        this.knowledgeSources = knowledgeSources;
+    }
     public Long getTicketId() {
         return ticketId;
     }

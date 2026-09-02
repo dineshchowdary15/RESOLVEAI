@@ -21,6 +21,8 @@ public record TicketAnalysisResponse(
 
         double confidence,
 
+        List<KnowledgeSourceResponse> knowledgeSources,
+
         OffsetDateTime createdAt
 
 ) {

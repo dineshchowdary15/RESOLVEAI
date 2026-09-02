@@ -30,6 +30,12 @@ export interface CreateTicketRequest {
 export interface UpdateTicketStatusRequest {
   status: TicketStatus;
 }
+
+export interface KnowledgeSource {
+  documentTitle: string;
+  similarity: number;
+}
+
 export interface TicketAnalysis {
   id: number;
   ticketId: number;
@@ -39,5 +45,23 @@ export interface TicketAnalysis {
   possibleCauses: string[];
   recommendedActions: string[];
   confidence: number;
+  knowledgeSources: KnowledgeSource[];
   createdAt: string;
+}
+export interface DuplicateCheckRequest {
+  title: string;
+  description: string;
+}
+
+export interface DuplicateIncident {
+  ticketId: number;
+  title: string;
+  description: string;
+  similarity: number;
+}
+
+export interface DuplicateSearchResponse {
+  potentialDuplicate: boolean;
+  threshold: number;
+  results: DuplicateIncident[];
 }
