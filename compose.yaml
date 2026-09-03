@@ -1,5 +1,9 @@
 services:
 
+  # =====================================================
+  # POSTGRESQL + PGVECTOR
+  # =====================================================
+
   postgres:
     image: pgvector/pgvector:pg17
     container_name: resolveai-postgres
@@ -16,10 +20,124 @@ services:
       - resolveai_postgres_data:/var/lib/postgresql/data
 
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U resolveai -d resolveai"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U resolveai -d resolveai"
+        ]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+
+    restart: unless-stopped
+
+
+  # =====================================================
+  # PYTHON / FASTAPI AI SERVICE
+  # =====================================================
+
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+
+    image: resolveai-ai-service
+
+    container_name: resolveai-ai-service
+
+    environment:
+      DATABASE_URL: postgresql://resolveai:resolveai_dev@postgres:5432/resolveai
+
+      OLLAMA_HOST: http://host.docker.internal:11434
+      OLLAMA_MODEL: qwen3:4b
+      EMBEDDING_MODEL: nomic-embed-text
+
+      USE_LLM: "true"
+
+    ports:
+      - "8000:8000"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+    restart: unless-stopped
+
+
+  # =====================================================
+  # JAVA / SPRING BOOT TICKET SERVICE
+  # =====================================================
+
+  ticket-service:
+    build:
+      context: ./ticket-service
+      dockerfile: Dockerfile
+
+    image: resolveai-ticket-service
+
+    container_name: resolveai-ticket-service
+
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/resolveai
+      DB_USERNAME: resolveai
+      DB_PASSWORD: resolveai_dev
+
+      AI_SERVICE_BASE_URL: http://ai-service:8000
+
+    ports:
+      - "8080:8080"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+      ai-service:
+        condition: service_healthy
+
+    restart: unless-stopped
+
+
+  # =====================================================
+  # REACT + NGINX FRONTEND
+  # =====================================================
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+
+    image: resolveai-frontend
+
+    container_name: resolveai-frontend
+
+    ports:
+      - "3000:80"
+
+    depends_on:
+      - ticket-service
+
+    restart: unless-stopped
+
+
+# =====================================================
+# PERSISTENT VOLUMES
+# =====================================================
 
 volumes:
   resolveai_postgres_data:
