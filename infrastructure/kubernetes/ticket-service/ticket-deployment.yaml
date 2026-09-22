@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: resolveai-ticket-service
+  namespace: resolveai
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: resolveai-ticket-service
+
+  template:
+    metadata:
+      labels:
+        app: resolveai-ticket-service
+
+    spec:
+      containers:
+        - name: ticket-service
+
+          image: resolveai-ticket-service:latest
+
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - containerPort: 8080
+
+          env:
+            - name: DB_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: resolveai-ticket-config
+                  key: DB_URL
+
+            - name: AI_SERVICE_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: resolveai-ticket-config
+                  key: AI_SERVICE_BASE_URL
+
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: resolveai-postgres-secret
+                  key: POSTGRES_USER
+
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: resolveai-postgres-secret
+                  key: POSTGRES_PASSWORD
+
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 6
+
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+
+            initialDelaySeconds: 25
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 5

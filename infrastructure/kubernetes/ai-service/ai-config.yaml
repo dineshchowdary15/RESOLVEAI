@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: resolveai-ai-config
+  namespace: resolveai
+
+data:
+  OLLAMA_HOST: "http://host.docker.internal:11434"
+  OLLAMA_MODEL: "qwen3:4b"
+  EMBEDDING_MODEL: "nomic-embed-text"
+  USE_LLM: "true"

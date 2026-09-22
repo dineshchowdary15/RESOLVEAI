@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+
+metadata:
+  name: ticket-service
+  namespace: resolveai
+
+spec:
+  type: ClusterIP
+
+  selector:
+    app: resolveai-ticket-service
+
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
