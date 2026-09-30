@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: resolveai-frontend
+  namespace: resolveai
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: resolveai-frontend
+
+  template:
+    metadata:
+      labels:
+        app: resolveai-frontend
+
+    spec:
+      containers:
+        - name: frontend
+
+          image: resolveai-frontend:latest
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - containerPort: 80
+
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 5
+
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 5
