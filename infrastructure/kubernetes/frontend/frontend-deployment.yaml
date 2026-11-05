@@ -21,7 +21,7 @@ spec:
       containers:
         - name: frontend
 
-          image: resolveai-frontend:latest
+          image: resolveai-frontend:timeout180-v1
           imagePullPolicy: IfNotPresent
 
           ports:
